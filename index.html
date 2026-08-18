@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#10281f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<title>Daily 10</title>
+<style>
+:root{--bg:#0f1713;--panel:#17211c;--panel2:#1d2b24;--text:#f5f7f5;--muted:#aab7af;--line:#2d3b33;--accent:#7ec89d;--soft:#213d2d}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text)}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.app{max-width:720px;min-height:100vh;margin:auto;padding:18px 16px 28px}
+.top{display:flex;align-items:center;gap:11px;margin-bottom:14px}.logo{width:46px;height:46px;border-radius:14px;background:var(--accent);display:grid;place-items:center;color:#10281f;font-weight:900;font-size:20px}
+h1{font-size:22px;margin:0}.sub{color:var(--muted);font-size:13px;margin-top:4px}
+.main{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:28px;padding:24px 18px 18px}
+.eye{text-align:center;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.12em}
+#exercise{text-align:center;font-size:30px;font-weight:800;margin:8px 0}#cue{text-align:center;color:var(--muted);min-height:44px}
+#segment{text-align:center;font-size:78px;font-weight:900;letter-spacing:-.05em;margin:10px 0 0;font-variant-numeric:tabular-nums}
+#overall{text-align:center;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.progress{height:12px;background:#253129;border-radius:999px;overflow:hidden;margin:18px 0 20px;border:1px solid #314038}#bar{height:100%;width:0;background:var(--accent)}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}button{min-height:58px;border-radius:18px;border:1px solid var(--line);background:#202c25;color:var(--text);font:inherit;font-size:17px;font-weight:800}.primary{background:var(--accent);color:#102016;border-color:var(--accent)}button:disabled{opacity:.42}.wide{grid-column:1/-1}
+.toggles{display:flex;justify-content:center;gap:18px;margin-top:16px;color:var(--muted);font-size:14px}.status{text-align:center;color:var(--muted);min-height:22px;margin-top:14px;font-size:14px}
+.title{margin:22px 2px 10px;font-size:14px;color:var(--muted);font-weight:800}.routine{display:grid;gap:8px}.row{display:flex;justify-content:space-between;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:13px 14px}.current{background:var(--soft);border-color:#355a46}.done{color:#7f8e84}.row small{color:var(--muted)}
+.footer{margin-top:18px;color:#829087;text-align:center;font-size:12px;line-height:1.45}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top"><div class="logo">10</div><div><h1>Daily 10</h1><div class="sub">Stretch & strength · offline</div></div></div>
+  <section class="main">
+    <div class="eye">CURRENT EXERCISE</div><div id="exercise">Sun salutations</div>
+    <div id="cue">2–3 gentle, flowing rounds</div><div id="segment">2:00</div><div id="overall">10:00 total remaining</div>
+    <div class="progress"><div id="bar"></div></div>
+    <div class="controls"><button id="start" class="primary">Start</button><button id="pause" disabled>Pause</button><button id="back">Back</button><button id="next">Next</button><button id="reset" class="wide">Reset routine</button></div>
+    <div class="toggles"><label><input type="checkbox" id="beep" checked> Beep</label><label><input type="checkbox" id="vibrate" checked> Vibrate</label></div>
+    <div id="status" class="status">Press Start when you're ready.</div>
+  </section>
+  <div class="title">TODAY'S ROUTINE</div><div id="routine" class="routine"></div>
+  <div class="footer">Keep Achilles and groin work comfortable. Stop for sharp pain or anything that feels wrong.</div>
+</div>
+<script>
+const steps=[
+{name:'Sun salutations',secs:120,cue:'2–3 gentle, flowing rounds'},
+{name:'Cat/cow → child’s pose',secs:60,cue:'30 sec cat/cow, then 30 sec child’s pose'},
+{name:'Achilles & calf stretch',secs:60,cue:'30 sec each side; gentle, no bouncing'},
+{name:'Adductor rock-backs',secs:60,cue:'30 sec each side; smooth, comfortable movement'},
+{name:'Slow squats',secs:60,cue:'12–20 controlled reps'},
+{name:'Press-ups',secs:60,cue:'Use an incline if that keeps your form good'},
+{name:'Core',secs:60,cue:'Alternate days: plank / controlled sit-ups'},
+{name:'Glute bridges',secs:60,cue:'15–20 slow reps; squeeze at the top'},
+{name:'Side plank',secs:60,cue:'About 25 sec each side; knees down is fine'}];
+const TOTAL=steps.reduce((a,b)=>a+b.secs,0);let idx=0,seg=steps[0].secs,total=TOTAL,running=false,ticker=null;
+const $=id=>document.getElementById(id);const exercise=$('exercise'),cue=$('cue'),segment=$('segment'),overall=$('overall'),bar=$('bar'),status=$('status'),start=$('start'),pause=$('pause'),back=$('back'),next=$('next'),reset=$('reset'),routine=$('routine'),beep=$('beep'),vibrate=$('vibrate');
+const fmt=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');const before=i=>steps.slice(0,i).reduce((a,b)=>a+b.secs,0);
+function signal(){if(vibrate.checked&&navigator.vibrate)navigator.vibrate(180);if(beep.checked){try{const A=window.AudioContext||window.webkitAudioContext,c=new A(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=880;g.gain.setValueAtTime(.12,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.22);o.start();o.stop(c.currentTime+.22)}catch(e){}}}
+function draw(){routine.innerHTML='';steps.forEach((s,i)=>{const r=document.createElement('div');r.className='row'+(i===idx&&total>0?' current':'')+(i<idx?' done':'');r.innerHTML='<div>'+(i<idx?'✓ ':'')+s.name+'</div><small>'+fmt(s.secs)+'</small>';routine.appendChild(r)})}
+function render(){if(total<=0||idx>=steps.length){exercise.textContent='Finished!';cue.textContent='Ten minutes done for today.';segment.textContent='0:00';overall.textContent='0:00 total remaining';bar.style.width='100%';draw();return}exercise.textContent=steps[idx].name;cue.textContent=steps[idx].cue;segment.textContent=fmt(seg);overall.textContent=fmt(total)+' total remaining';bar.style.width=((TOTAL-total)/TOTAL*100)+'%';draw()}
+function stop(){if(ticker)clearInterval(ticker);ticker=null;running=false;start.disabled=false;pause.disabled=true}
+function finish(){stop();total=0;idx=steps.length;status.textContent='Done — 10 minutes completed.';signal();render()}
+function go(i){idx=Math.max(0,Math.min(steps.length-1,i));seg=steps[idx].secs;total=TOTAL-before(idx);status.textContent='Ready: '+steps[idx].name;render()}
+function advance(auto){if(idx>=steps.length-1){finish();return}idx++;seg=steps[idx].secs;if(!auto)total=TOTAL-before(idx);signal();status.textContent='Next: '+steps[idx].name;render()}
+function tick(){seg--;total--;if(total<=0){finish();return}if(seg<=0){advance(true);return}render()}
+start.onclick=()=>{if(running||total<=0)return;running=true;start.disabled=true;pause.disabled=false;status.textContent='Running — steady and controlled.';ticker=setInterval(tick,1000)}
+pause.onclick=()=>{stop();status.textContent='Paused.'}
+next.onclick=()=>{if(total<=0)return;const was=running;stop();go(idx+1);signal();if(was)start.click()}
+back.onclick=()=>{if(total<=0)return;const was=running;stop();go(idx-1);signal();if(was)start.click()}
+reset.onclick=()=>{stop();idx=0;seg=steps[0].secs;total=TOTAL;status.textContent="Press Start when you're ready.";render()}
+render();
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}
+</script>
+</body>
+</html>
